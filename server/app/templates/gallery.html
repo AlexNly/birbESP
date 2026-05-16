@@ -5,9 +5,12 @@
 <section>
   <div class="section-head">
     <h2>All frames — {{ date }}</h2>
-    <form method="get" action="/gallery" class="datepick">
-      <input type="date" name="date" value="{{ date }}" onchange="this.form.submit()">
-    </form>
+    <div class="section-actions">
+      <a href="/scrub" class="section-action" title="Fast scrub mode">⏩ scrub</a>
+      <form method="get" action="/gallery" class="datepick">
+        <input type="date" name="date" value="{{ date }}" onchange="this.form.submit()">
+      </form>
+    </div>
   </div>
 
   {% if frames %}

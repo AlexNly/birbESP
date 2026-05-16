@@ -58,6 +58,21 @@ a { color: inherit; text-decoration: none; }
   background: var(--accent); color: #1c1208;
   font-weight: 700; border-radius: var(--radius);
 }
+.cta-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.section-actions {
+  display: flex; align-items: center; gap: 10px;
+}
+.section-action {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 10px; border-radius: 8px;
+  background: var(--bg-elev); color: var(--accent);
+  font-size: 13px; text-decoration: none;
+  border: 1px solid var(--border);
+}
 
 .section-head {
   display: flex; align-items: center; justify-content: space-between;
@@ -240,7 +255,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 
 .bottomnav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(4, 1fr);
   background: var(--bg-elev);
   border-top: 1px solid var(--border);
   padding-bottom: env(safe-area-inset-bottom);
