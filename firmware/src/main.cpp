@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "config.h"
+#include "uploader.h"
 #include "wifi_setup.h"
 
 void setup() {
@@ -18,6 +19,8 @@ void setup() {
   if (!wifi_begin()) {
     Serial.println("[wifi] no connection yet — continuing, will retry in background");
   }
+
+  uploader_start();
 }
 
 void loop() {
