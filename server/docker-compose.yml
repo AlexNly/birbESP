@@ -15,4 +15,4 @@ services:
       #   ESP32_STREAM_URL=http://birb.local/stream
       ESP32_STREAM_URL: ${ESP32_STREAM_URL:-}
       # Mean-abs-difference threshold (0-255) for tagging a frame as a highlight.
-      BIRB_HIGHLIGHT_THRESHOLD: ${BIRB_HIGHLIGHT_THRESHOLD:-8.0}
+      BIRB_HIGHLIGHT_THRESHOLD: ${BIRB_HIGHLIGHT_THRESHOLD:-2.0}

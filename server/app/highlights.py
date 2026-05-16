@@ -21,7 +21,10 @@ _THUMB_SIZE = (64, 48)
 
 
 def _threshold() -> float:
-    return float(os.environ.get("BIRB_HIGHLIGHT_THRESHOLD", "8.0"))
+    # 2.0 is a loose starting point calibrated against synthetic frames from
+    # tools/fake_cam.py — real-world threshold needs empirical tuning once a
+    # day of feeder footage exists.
+    return float(os.environ.get("BIRB_HIGHLIGHT_THRESHOLD", "2.0"))
 
 
 def _thumb(jpeg_bytes: bytes) -> np.ndarray:
