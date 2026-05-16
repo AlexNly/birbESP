@@ -7,6 +7,11 @@
 #include "wifi_setup.h"
 
 void setup() {
+  // GPIO 4 on AI-Thinker drives the very bright white "flash" LED next to the
+  // camera lens — pin it LOW immediately so it never blinds the birds (or her).
+  pinMode(4, OUTPUT);
+  digitalWrite(4, LOW);
+
   Serial.begin(115200);
   delay(200);
   Serial.println();
