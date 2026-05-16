@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 
+from .highlights import get_highlighter
 from .storage import get_store
 
 app = FastAPI(title="birbESP", version="0.1.0")
@@ -21,7 +22,11 @@ async def upload(image: UploadFile = File(...)) -> JSONResponse:
     if not payload:
         raise HTTPException(400, "Empty upload")
     row = get_store().save_frame(payload, ts=datetime.now(timezone.utc))
-    return JSONResponse({"ok": True, **row})
+    diff_score, is_highlight = get_highlighter().score(payload)
+    get_store().mark_highlight(row["filename"], diff_score, is_highlight)
+    return JSONResponse(
+        {"ok": True, **row, "diff_score": diff_score, "is_highlight": is_highlight}
+    )
 
 
 @app.get("/api/latest.jpg")
