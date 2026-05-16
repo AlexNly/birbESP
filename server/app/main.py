@@ -185,10 +185,13 @@ def home(request: Request) -> HTMLResponse:
 
 @app.get("/live", response_class=HTMLResponse)
 def live(request: Request) -> HTMLResponse:
+    rotation = int(os.environ.get("BIRB_ROTATE", "0")) % 360
+    if rotation not in (0, 90, 180, 270):
+        rotation = 0
     return templates.TemplateResponse(
         request,
         "live.html",
-        {"active": "live", "stream_url": _stream_url()},
+        {"active": "live", "stream_url": _stream_url(), "rotation": rotation},
     )
 
 

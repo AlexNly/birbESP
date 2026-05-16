@@ -4,7 +4,7 @@
 {% block content %}
 <section class="live">
   {% if stream_url %}
-    <div id="liveBox" class="live-box">
+    <div id="liveBox" class="live-box{% if rotation %} live-rot-{{ rotation }}{% endif %}">
       <img class="live-img" src="{{ stream_url }}" alt="live MJPEG stream">
       <button id="liveFs" class="live-fs-btn" type="button"
               aria-label="Toggle fullscreen" title="Fullscreen">⛶</button>
