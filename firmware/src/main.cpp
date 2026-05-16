@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "config.h"
+#include "stream.h"
 #include "uploader.h"
 #include "wifi_setup.h"
 
@@ -20,9 +21,10 @@ void setup() {
     Serial.println("[wifi] no connection yet — continuing, will retry in background");
   }
 
+  stream_begin();
   uploader_start();
 }
 
 void loop() {
-  delay(1000);
+  stream_loop();
 }
