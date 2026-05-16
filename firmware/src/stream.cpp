@@ -15,19 +15,48 @@ static constexpr uint32_t kStreamFrameDelayMs = 50;   // ~20 fps cap
 
 // GPIO 4 drives the AI-Thinker board's onboard white "flash" LED.
 // Kept LOW at boot (see main.cpp); these handlers let the web UI toggle it.
+// Default temporary-on duration: 30 s, then auto-off as a safety against
+// "left it on, board overheated and scared the birds for an hour".
 static constexpr uint8_t kLedPin = 4;
+static constexpr uint32_t kLedDefaultMs = 30000;
 
-static void handle_led_status() {
-  bool on = digitalRead(kLedPin) == HIGH;
-  server.send(200, "application/json", String("{\"state\":\"") + (on ? "on" : "off") + "\"}");
-}
-static void handle_led_on() {
-  digitalWrite(kLedPin, HIGH);
-  server.send(200, "application/json", "{\"state\":\"on\"}");
-}
-static void handle_led_off() {
+// 0 = no timer (LED is off, or in permanent-on mode).
+// Otherwise, millis() value at which the LED should auto-off.
+static volatile unsigned long led_off_at_ms = 0;
+
+static void led_off() {
   digitalWrite(kLedPin, LOW);
-  server.send(200, "application/json", "{\"state\":\"off\"}");
+  led_off_at_ms = 0;
+}
+static void led_on(uint32_t duration_ms) {
+  digitalWrite(kLedPin, HIGH);
+  // duration_ms == 0 means permanent (no timeout).
+  led_off_at_ms = duration_ms ? (millis() + duration_ms) : 0;
+}
+
+static void led_send_status() {
+  bool on = digitalRead(kLedPin) == HIGH;
+  bool permanent = on && led_off_at_ms == 0;
+  uint32_t remaining_ms = 0;
+  if (on && led_off_at_ms != 0) {
+    // Signed subtraction wraps cleanly across millis() rollover (~49 d).
+    long delta = (long)(led_off_at_ms - millis());
+    if (delta > 0) remaining_ms = (uint32_t)delta;
+  }
+  String body = String("{\"state\":\"") + (on ? "on" : "off")
+              + "\",\"permanent\":" + (permanent ? "true" : "false")
+              + ",\"remaining_ms\":" + remaining_ms + "}";
+  server.send(200, "application/json", body);
+}
+static void handle_led_status()    { led_send_status(); }
+static void handle_led_on()        { led_on(kLedDefaultMs); led_send_status(); }
+static void handle_led_on_perm()   { led_on(0);             led_send_status(); }
+static void handle_led_off()       { led_off();             led_send_status(); }
+
+static void led_check_timeout() {
+  if (led_off_at_ms != 0 && (long)(millis() - led_off_at_ms) >= 0) {
+    led_off();
+  }
 }
 
 static void handle_root() {
@@ -75,6 +104,7 @@ void stream_begin() {
   server.on("/stream", handle_stream);
   server.on("/led", handle_led_status);
   server.on("/led/on", handle_led_on);
+  server.on("/led/on/permanent", handle_led_on_perm);
   server.on("/led/off", handle_led_off);
   server.onNotFound([]() { server.send(404, "text/plain", "not found"); });
   server.begin();
@@ -91,5 +121,6 @@ void stream_begin() {
 }
 
 void stream_loop() {
+  led_check_timeout();
   server.handleClient();
 }
