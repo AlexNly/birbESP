@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from contextlib import asynccontextmanager
-from datetime import date as date_cls, datetime, timezone
+from datetime import date as date_cls, datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
@@ -161,6 +161,33 @@ def live(request: Request) -> HTMLResponse:
         request,
         "live.html",
         {"active": "live", "stream_url": _stream_url()},
+    )
+
+
+@app.get("/api/frames")
+def api_frames(since: int, until: int, max: int = 2400) -> JSONResponse:
+    if until <= since:
+        raise HTTPException(400, "until must be > since")
+    if until - since > 7 * 24 * 3600 * 1000:
+        raise HTTPException(400, "range too large (max 7 days)")
+    return JSONResponse(get_store().list_in_range(since, until, max_count=max))
+
+
+@app.get("/scrub", response_class=HTMLResponse)
+def scrub_page(request: Request, hours: float = 3.0) -> HTMLResponse:
+    hours = max(0.25, min(hours, 24.0))
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(hours=hours)
+    return templates.TemplateResponse(
+        request,
+        "scrub.html",
+        {
+            "active": "scrub",
+            "hours": hours,
+            "since_ms": int(since.timestamp() * 1000),
+            "until_ms": int(now.timestamp() * 1000),
+            "windows": [0.5, 1, 3, 6, 12, 24],
+        },
     )
 
 

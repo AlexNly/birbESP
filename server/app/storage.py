@@ -215,6 +215,42 @@ class FrameStore:
             ).fetchone()
         return dict(row) if row else None
 
+    def list_in_range(
+        self,
+        since_epoch_ms: int,
+        until_epoch_ms: int,
+        max_count: int = 2400,
+    ) -> dict:
+        """Frames in [since..until], capped at max_count via even sampling.
+
+        All highlights are always included regardless of sampling — so the
+        scrubber never hides moments of motion. Returns a dict with the
+        frame list, the unsampled total, and whether sampling kicked in.
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT filename, ts_epoch_ms, is_highlight"
+                " FROM frames WHERE ts_epoch_ms BETWEEN ? AND ?"
+                " ORDER BY ts_epoch_ms ASC",
+                (since_epoch_ms, until_epoch_ms),
+            ).fetchall()
+        frames = [dict(r) for r in rows]
+        total = len(frames)
+        if total <= max_count:
+            return {"frames": frames, "total": total, "sampled": False}
+        highlights = [f for f in frames if f["is_highlight"]]
+        budget = max(1, max_count - len(highlights))
+        step = max(1, total // budget)
+        sampled = frames[::step]
+        seen: set[str] = set()
+        out: list[dict] = []
+        for f in highlights + sampled:
+            if f["filename"] not in seen:
+                seen.add(f["filename"])
+                out.append(f)
+        out.sort(key=lambda x: x["ts_epoch_ms"])
+        return {"frames": out, "total": total, "sampled": True}
+
 
 _store: FrameStore | None = None
 
