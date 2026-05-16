@@ -1,0 +1,18 @@
+services:
+  birbesp:
+    build: .
+    image: birbesp:latest
+    container_name: birbesp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      BIRB_DATA_DIR: /app/data
+      # URL the browser uses for the live MJPEG stream (ESP32 on LAN).
+      # Override per-deployment, e.g.:
+      #   ESP32_STREAM_URL=http://birb.local/stream
+      ESP32_STREAM_URL: ${ESP32_STREAM_URL:-}
+      # Mean-abs-difference threshold (0-255) for tagging a frame as a highlight.
+      BIRB_HIGHLIGHT_THRESHOLD: ${BIRB_HIGHLIGHT_THRESHOLD:-8.0}
