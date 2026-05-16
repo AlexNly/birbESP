@@ -4,7 +4,11 @@
 {% block content %}
 <section class="live">
   {% if stream_url %}
-    <img class="live-img" src="{{ stream_url }}" alt="live MJPEG stream">
+    <div id="liveBox" class="live-box">
+      <img class="live-img" src="{{ stream_url }}" alt="live MJPEG stream">
+      <button id="liveFs" class="live-fs-btn" type="button"
+              aria-label="Toggle fullscreen" title="Fullscreen">⛶</button>
+    </div>
     <p class="muted small">Streaming from <code>{{ stream_url }}</code></p>
   {% else %}
     <div class="live-empty">
@@ -14,4 +18,54 @@
     </div>
   {% endif %}
 </section>
+
+{% if stream_url %}
+<script>
+  (function () {
+    var box = document.getElementById('liveBox');
+    var btn = document.getElementById('liveFs');
+    if (!box || !btn) return;
+
+    function inFallback() {
+      return document.body.classList.contains('live-fs-fallback');
+    }
+    function setFallback(on) {
+      document.body.classList.toggle('live-fs-fallback', on);
+    }
+    function inNative() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement);
+    }
+    function enter() {
+      var req = box.requestFullscreen || box.webkitRequestFullscreen;
+      if (req) {
+        try { req.call(box).catch(function () { setFallback(true); }); }
+        catch (e) { setFallback(true); }
+      } else {
+        setFallback(true);
+      }
+    }
+    function exit() {
+      if (inNative()) {
+        var ex = document.exitFullscreen || document.webkitExitFullscreen;
+        if (ex) ex.call(document);
+      }
+      setFallback(false);
+    }
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      (inNative() || inFallback()) ? exit() : enter();
+    });
+    box.addEventListener('click', function () {
+      (inNative() || inFallback()) ? exit() : enter();
+    });
+    document.addEventListener('fullscreenchange', function () {
+      if (!inNative()) setFallback(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && inFallback()) exit();
+    });
+  })();
+</script>
+{% endif %}
 {% endblock %}
