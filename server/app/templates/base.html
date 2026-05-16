@@ -21,7 +21,9 @@
   <script>
     // Format every <time datetime="..."> in the user's locale + timezone.
     // Server stores UTC ISO; this turns it into something readable.
-    // Elements with data-fmt="time" get HH:MM:SS only (used by thumb tags).
+    //   data-fmt="time" -> HH:MM:SS only (thumb tags, pager)
+    //   data-fmt="date" -> date only (back-links, headings)
+    //   no data-fmt    -> full date + time
     document.addEventListener('DOMContentLoaded', function () {
       var fullFmt = new Intl.DateTimeFormat(undefined, {
         year: 'numeric', month: 'short', day: '2-digit',
@@ -32,10 +34,16 @@
         hour: '2-digit', minute: '2-digit', second: '2-digit',
         hour12: false,
       });
+      var dateFmt = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+      });
+      var fmtFor = function (which) {
+        return which === 'time' ? timeFmt : which === 'date' ? dateFmt : fullFmt;
+      };
       document.querySelectorAll('time[datetime]').forEach(function (el) {
         var d = new Date(el.getAttribute('datetime'));
         if (isNaN(d)) return;
-        el.textContent = (el.dataset.fmt === 'time' ? timeFmt : fullFmt).format(d);
+        el.textContent = fmtFor(el.dataset.fmt).format(d);
       });
     });
   </script>

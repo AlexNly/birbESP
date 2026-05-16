@@ -3,7 +3,7 @@
 
 {% block content %}
 <section class="frame-detail">
-  <a href="/gallery?date={{ frame.date }}" class="muted-link small">← back to {{ frame.date }}</a>
+  <a href="/gallery?date={{ frame.date }}" class="muted-link small">←&nbsp;back to <time datetime="{{ frame.ts_iso }}" data-fmt="date">{{ frame.date }}</time></a>
 
   <img class="hero-img" src="/frames/{{ frame.filename }}" alt="frame {{ frame.ts_iso }}">
 
@@ -23,7 +23,7 @@
     {% if newer %}
       <a href="/frame/{{ newer }}">← newer</a>
     {% else %}<span></span>{% endif %}
-    <span class="muted small">{{ frame.ts_iso[11:19] }}</span>
+    <time class="muted small" datetime="{{ frame.ts_iso }}" data-fmt="time">{{ frame.ts_iso[11:19] }}</time>
     {% if older %}
       <a href="/frame/{{ older }}">older →</a>
     {% else %}<span></span>{% endif %}
