@@ -117,6 +117,30 @@ def serve_frame(path: str) -> FileResponse:
     )
 
 
+@app.get("/frame/{path:path}", response_class=HTMLResponse)
+def frame_detail(request: Request, path: str) -> HTMLResponse:
+    if not _FRAME_RE.match(path):
+        raise HTTPException(404, "Not found")
+    store = get_store()
+    row = store.get(path)
+    if row is None:
+        raise HTTPException(404, "Not found")
+    neighbors = store.neighbors(path)
+    iso = row["ts_iso"]
+    download_name = f"birbESP-{iso[:10]}T{iso[11:19].replace(':', '-')}.jpg"
+    return templates.TemplateResponse(
+        request,
+        "frame.html",
+        {
+            "active": "gallery",
+            "frame": row,
+            "newer": neighbors["newer"],
+            "older": neighbors["older"],
+            "download_name": download_name,
+        },
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
     store = get_store()

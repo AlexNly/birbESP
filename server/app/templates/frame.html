@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}birbESP — {{ frame.ts_iso[:19] }}{% endblock %}
+
+{% block content %}
+<section class="frame-detail">
+  <a href="/gallery?date={{ frame.date }}" class="muted-link small">← back to {{ frame.date }}</a>
+
+  <img class="hero-img" src="/frames/{{ frame.filename }}" alt="frame {{ frame.ts_iso }}">
+
+  <p class="hero-meta">
+    <time datetime="{{ frame.ts_iso }}">{{ frame.ts_iso[:19] }}</time>
+    {% if frame.is_highlight %}<span class="pill pill-star">★ highlight</span>{% endif %}
+    {% if frame.diff_score is not none %}
+      <span class="small muted">diff = {{ '%.2f' | format(frame.diff_score) }}</span>
+    {% endif %}
+  </p>
+
+  <a class="cta" href="/frames/{{ frame.filename }}" download="{{ download_name }}">⬇ Download</a>
+
+  <p class="small muted dl-hint">Tip: long-press the image to save it directly to Photos.</p>
+
+  <nav class="pager">
+    {% if newer %}
+      <a href="/frame/{{ newer }}">← newer</a>
+    {% else %}<span></span>{% endif %}
+    <span class="muted small">{{ frame.ts_iso[11:19] }}</span>
+    {% if older %}
+      <a href="/frame/{{ older }}">older →</a>
+    {% else %}<span></span>{% endif %}
+  </nav>
+</section>
+{% endblock %}
