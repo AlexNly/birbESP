@@ -116,6 +116,37 @@ a { color: inherit; text-decoration: none; }
   background: var(--bg); border-radius: var(--radius);
   display: block;
 }
+
+/* Client-side rotation of the live MJPEG so it matches the BIRB_ROTATE
+   server-side rotation of stored frames. The stream comes out of the cam
+   landscape; if the cam is physically mounted sideways, we apply the
+   inverse rotation here so the user sees an upright feed. */
+.live-box.live-rot-180 .live-img { transform: rotate(180deg); }
+
+/* For 90° / 270° the container has to swap to portrait aspect or the
+   rotated image overflows. Container becomes 3:4 and the 4:3 image is
+   absolute-positioned inside, scaled and rotated to fill exactly. */
+.live-box.live-rot-90,
+.live-box.live-rot-270 {
+  width: min(75%, calc(70vh * 3 / 4));
+  margin: 0 auto;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.live-box.live-rot-90 .live-img,
+.live-box.live-rot-270 .live-img {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 133.333%;
+  height: 75%;
+  max-height: none; aspect-ratio: auto;
+  border-radius: 0; background: transparent;
+}
+.live-box.live-rot-90  .live-img { transform: translate(-50%, -50%) rotate(90deg); }
+.live-box.live-rot-270 .live-img { transform: translate(-50%, -50%) rotate(-90deg); }
+
 .live-empty {
   padding: 32px 18px; text-align: center;
   border: 1px dashed var(--border); border-radius: var(--radius);
