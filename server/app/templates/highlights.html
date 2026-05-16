@@ -13,7 +13,7 @@
   {% if frames %}
     <div class="thumbgrid">
       {% for f in frames %}
-        <a class="thumb" href="/frames/{{ f.filename }}">
+        <a class="thumb" href="/frame/{{ f.filename }}">
           <img loading="lazy" src="/frames/{{ f.filename }}" alt="frame {{ f.ts_iso }}">
           <span class="thumb-ts">{{ f.ts_iso[11:19] }}</span>
         </a>
