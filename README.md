@@ -15,10 +15,22 @@ enjoy from her phone, and as a documented maker project for everyone else.
 | Component   | State                                                                 |
 |-------------|-----------------------------------------------------------------------|
 | Spec        | ✅ written                                                             |
-| Server      | ✅ scaffold, upload, highlights, mobile UI, docker-compose             |
+| Server      | ✅ scaffold, upload, highlights, mobile UI, docker-compose, retention, per-frame Download |
 | Tools       | ✅ `fake_cam.py` for hardware-free UX iteration                        |
 | Firmware    | ✅ WiFi + SVGA cam + 1 Hz uploader + MJPEG `/stream` + mDNS (assumes AI-Thinker pinout — confirm before flashing) |
 | Build log   | ⏳ add photos as the rig comes together (`docs/photos/`, `build-log.md`) |
+
+### Retention defaults
+
+Non-highlight frames are dropped after **7 days**; highlights survive **30
+days**. Override via `BIRB_RETAIN_DAYS` / `BIRB_RETAIN_HIGHLIGHT_DAYS`. Set
+`BIRB_RETAIN_DAYS=0` (or negative) to **disable** pruning entirely.
+
+### Phone download
+
+Tapping any thumbnail opens a frame detail page with a big **⬇ Download**
+button (saves to Files / Downloads via the `download` attribute). On iOS, you
+can also long-press the image itself to save directly to **Photos**.
 
 ## Quickstart (no hardware needed)
 
