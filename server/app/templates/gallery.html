@@ -18,7 +18,7 @@
       {% for f in frames %}
         <a class="thumb {% if f.is_highlight %}is-highlight{% endif %}" href="/frame/{{ f.filename }}">
           <img loading="lazy" src="/frames/{{ f.filename }}" alt="frame {{ f.ts_iso }}">
-          <span class="thumb-ts">{{ f.ts_iso[11:19] }}</span>
+          <time class="thumb-ts" datetime="{{ f.ts_iso }}" data-fmt="time">{{ f.ts_iso[11:19] }}</time>
         </a>
       {% endfor %}
     </div>

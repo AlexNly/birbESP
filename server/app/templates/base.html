@@ -20,17 +20,22 @@
 
   <script>
     // Format every <time datetime="..."> in the user's locale + timezone.
-    // Server stores UTC ISO; this turns it into something readable
-    // (e.g. "16. Mai 2026, 22:46:10" instead of "2026-05-16T20:46:10.117742+00:00").
+    // Server stores UTC ISO; this turns it into something readable.
+    // Elements with data-fmt="time" get HH:MM:SS only (used by thumb tags).
     document.addEventListener('DOMContentLoaded', function () {
-      var fmt = new Intl.DateTimeFormat(undefined, {
+      var fullFmt = new Intl.DateTimeFormat(undefined, {
         year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+      });
+      var timeFmt = new Intl.DateTimeFormat(undefined, {
         hour: '2-digit', minute: '2-digit', second: '2-digit',
         hour12: false,
       });
       document.querySelectorAll('time[datetime]').forEach(function (el) {
         var d = new Date(el.getAttribute('datetime'));
-        if (!isNaN(d)) el.textContent = fmt.format(d);
+        if (isNaN(d)) return;
+        el.textContent = (el.dataset.fmt === 'time' ? timeFmt : fullFmt).format(d);
       });
     });
   </script>

@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from PIL import Image
 
 from .highlights import get_highlighter
-from .storage import get_store
+from .storage import get_store, local_tz
 
 _APP_DIR = Path(__file__).resolve().parent
 log = logging.getLogger("birbesp")
@@ -224,7 +224,7 @@ def highlights_page(request: Request, date: str | None = None) -> HTMLResponse:
     store = get_store()
     if date is None:
         dates = store.dates_with_frames()
-        date = dates[0] if dates else date_cls.today().isoformat()
+        date = dates[0] if dates else datetime.now(local_tz()).strftime("%Y-%m-%d")
     frames = store.list_by_date(date, highlights_only=True)
     return templates.TemplateResponse(
         request,
@@ -242,7 +242,7 @@ def gallery_page(
     store = get_store()
     if date is None:
         dates = store.dates_with_frames()
-        date = dates[0] if dates else date_cls.today().isoformat()
+        date = dates[0] if dates else datetime.now(local_tz()).strftime("%Y-%m-%d")
     all_frames = store.list_by_date(date)
     page_count = max(1, (len(all_frames) + GALLERY_PAGE_SIZE - 1) // GALLERY_PAGE_SIZE)
     page = max(0, min(page, page_count - 1))

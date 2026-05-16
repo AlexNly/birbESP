@@ -1,15 +1,25 @@
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
+from zoneinfo import ZoneInfo
 
 
 def _data_dir() -> Path:
     return Path(os.environ.get("BIRB_DATA_DIR", "data")).resolve()
+
+
+def local_tz() -> ZoneInfo:
+    """Return the configured local timezone (BIRB_TZ env, default UTC)."""
+    return ZoneInfo(os.environ.get("BIRB_TZ", "UTC"))
+
+
+log = logging.getLogger("birbesp.storage")
 
 
 class FrameStore:
@@ -50,18 +60,55 @@ class FrameStore:
                 );
                 CREATE INDEX IF NOT EXISTS idx_frames_date ON frames(date);
                 CREATE INDEX IF NOT EXISTS idx_frames_ts ON frames(ts_epoch_ms);
+                CREATE TABLE IF NOT EXISTS meta (
+                    key   TEXT PRIMARY KEY,
+                    value TEXT
+                );
                 """
+            )
+        self._migrate_dates_to_local_tz()
+
+    def _migrate_dates_to_local_tz(self) -> None:
+        """Recompute the date column for every existing row in the configured
+        local timezone. One-shot, idempotent (gated on a meta sentinel).
+        Files on disk are not moved — only the index column changes."""
+        key = "migration_v2_local_dates"
+        with self._lock, self._connect() as conn:
+            row = conn.execute("SELECT value FROM meta WHERE key = ?", (key,)).fetchone()
+            if row is not None:
+                return
+            tz = local_tz()
+            rows = conn.execute("SELECT filename, ts_epoch_ms FROM frames").fetchall()
+            for r in rows:
+                ts = datetime.fromtimestamp(r["ts_epoch_ms"] / 1000, tz=timezone.utc)
+                local_date = ts.astimezone(tz).strftime("%Y-%m-%d")
+                conn.execute(
+                    "UPDATE frames SET date = ? WHERE filename = ?",
+                    (local_date, r["filename"]),
+                )
+            conn.execute("INSERT INTO meta(key, value) VALUES (?, 'done')", (key,))
+            log.info(
+                "[storage] migrated %d rows to local-tz date buckets (tz=%s)",
+                len(rows), tz.key,
             )
 
     def save_frame(self, jpeg_bytes: bytes, ts: datetime | None = None) -> dict:
-        """Persist a JPEG and index it. Returns the new row as a dict."""
+        """Persist a JPEG and index it. Returns the new row as a dict.
+
+        On-disk path and DB `date` are computed in the configured local
+        timezone (BIRB_TZ) so that a frame captured at 00:30 local always
+        appears under the same date the user is thinking in. The full
+        UTC ISO timestamp is preserved in `ts_iso` for unambiguous storage
+        and client-side localisation.
+        """
         ts = ts or datetime.now(timezone.utc)
-        date_str = ts.strftime("%Y-%m-%d")
-        sub = self.base_dir / ts.strftime("%Y") / ts.strftime("%m") / ts.strftime("%d")
+        local_ts = ts.astimezone(local_tz())
+        date_str = local_ts.strftime("%Y-%m-%d")
+        sub = self.base_dir / local_ts.strftime("%Y") / local_ts.strftime("%m") / local_ts.strftime("%d")
         sub.mkdir(parents=True, exist_ok=True)
-        ms = int(ts.microsecond / 1000)
-        fname = f"{ts.strftime('%H%M%S')}_{ms:03d}.jpg"
-        rel = f"{ts.strftime('%Y/%m/%d')}/{fname}"
+        ms = int(local_ts.microsecond / 1000)
+        fname = f"{local_ts.strftime('%H%M%S')}_{ms:03d}.jpg"
+        rel = f"{local_ts.strftime('%Y/%m/%d')}/{fname}"
         path = sub / fname
         path.write_bytes(jpeg_bytes)
 
