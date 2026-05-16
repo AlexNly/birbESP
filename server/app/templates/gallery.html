@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}birbESP — gallery{% endblock %}
+
+{% block content %}
+<section>
+  <div class="section-head">
+    <h2>All frames — {{ date }}</h2>
+    <form method="get" action="/gallery" class="datepick">
+      <input type="date" name="date" value="{{ date }}" onchange="this.form.submit()">
+    </form>
+  </div>
+
+  {% if frames %}
+    <div class="thumbgrid">
+      {% for f in frames %}
+        <a class="thumb {% if f.is_highlight %}is-highlight{% endif %}" href="/frames/{{ f.filename }}">
+          <img loading="lazy" src="/frames/{{ f.filename }}" alt="frame {{ f.ts_iso }}">
+          <span class="thumb-ts">{{ f.ts_iso[11:19] }}</span>
+        </a>
+      {% endfor %}
+    </div>
+    <nav class="pager">
+      {% if prev_page is not none %}
+        <a href="/gallery?date={{ date }}&page={{ prev_page }}">← newer</a>
+      {% else %}<span></span>{% endif %}
+      <span class="muted">page {{ page + 1 }} of {{ page_count }}</span>
+      {% if next_page is not none %}
+        <a href="/gallery?date={{ date }}&page={{ next_page }}">older →</a>
+      {% else %}<span></span>{% endif %}
+    </nav>
+  {% else %}
+    <p class="muted">No frames on this day yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

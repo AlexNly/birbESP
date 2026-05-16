@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e1116">
+  <title>{% block title %}birbESP{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">birb<span class="brand-accent">ESP</span></h1>
+    {% block topbar_extra %}{% endblock %}
+  </header>
+
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <nav class="bottomnav">
+    <a href="/" class="navlink {% if active == 'home' %}active{% endif %}">
+      <span class="navicon">●</span><span>Home</span>
+    </a>
+    <a href="/live" class="navlink {% if active == 'live' %}active{% endif %}">
+      <span class="navicon">▶</span><span>Live</span>
+    </a>
+    <a href="/highlights" class="navlink {% if active == 'highlights' %}active{% endif %}">
+      <span class="navicon">★</span><span>Highlights</span>
+    </a>
+    <a href="/gallery" class="navlink {% if active == 'gallery' %}active{% endif %}">
+      <span class="navicon">▦</span><span>Gallery</span>
+    </a>
+  </nav>
+</body>
+</html>

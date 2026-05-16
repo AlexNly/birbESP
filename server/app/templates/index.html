@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}birbESP — latest{% endblock %}
+
+{% block content %}
+<section class="hero">
+  {% if latest %}
+    <img id="latest" class="hero-img" src="/api/latest.jpg?v={{ latest.ts_epoch_ms }}" alt="latest frame">
+    <p class="hero-meta">
+      Latest <time datetime="{{ latest.ts_iso }}">{{ latest.ts_iso }}</time>
+      {% if latest.is_highlight %}<span class="pill pill-star">★ highlight</span>{% endif %}
+    </p>
+  {% else %}
+    <div class="hero-empty">
+      <p>No frames yet.</p>
+      <p class="muted">Power on the cam, or run <code>tools/fake_cam.py</code> for a dry run.</p>
+    </div>
+  {% endif %}
+  <a href="/live" class="cta">▶ Watch live</a>
+</section>
+
+{% if recent_highlights %}
+<section>
+  <div class="section-head">
+    <h2>Recent highlights</h2>
+    <a href="/highlights" class="muted-link">all →</a>
+  </div>
+  <div class="thumbgrid">
+    {% for f in recent_highlights %}
+      <a class="thumb" href="/frames/{{ f.filename }}">
+        <img loading="lazy" src="/frames/{{ f.filename }}" alt="frame {{ f.ts_iso }}">
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<script>
+  // Auto-refresh the hero image every 2s so "home" feels alive without a full stream.
+  (function() {
+    var img = document.getElementById('latest');
+    if (!img) return;
+    setInterval(function() {
+      img.src = '/api/latest.jpg?v=' + Date.now();
+    }, 2000);
+  })();
+</script>
+{% endblock %}

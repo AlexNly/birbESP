@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}birbESP — live{% endblock %}
+
+{% block content %}
+<section class="live">
+  {% if stream_url %}
+    <img class="live-img" src="{{ stream_url }}" alt="live MJPEG stream">
+    <p class="muted small">Streaming from <code>{{ stream_url }}</code></p>
+  {% else %}
+    <div class="live-empty">
+      <p>Live stream URL is not configured.</p>
+      <p class="muted">Set <code>ESP32_STREAM_URL</code> in the server environment
+        (e.g. <code>http://birb.local/stream</code>) and restart.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

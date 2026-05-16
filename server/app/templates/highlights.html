@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}birbESP — highlights{% endblock %}
+
+{% block content %}
+<section>
+  <div class="section-head">
+    <h2>Highlights — {{ date }}</h2>
+    <form method="get" action="/highlights" class="datepick">
+      <input type="date" name="date" value="{{ date }}" onchange="this.form.submit()">
+    </form>
+  </div>
+
+  {% if frames %}
+    <div class="thumbgrid">
+      {% for f in frames %}
+        <a class="thumb" href="/frames/{{ f.filename }}">
+          <img loading="lazy" src="/frames/{{ f.filename }}" alt="frame {{ f.ts_iso }}">
+          <span class="thumb-ts">{{ f.ts_iso[11:19] }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted">No highlights on this day yet.</p>
+  {% endif %}
+</section>
+{% endblock %}
