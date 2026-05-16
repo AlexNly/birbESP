@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -132,6 +132,88 @@ class FrameStore:
         sql += " ORDER BY ts_epoch_ms DESC LIMIT ?"
         with self._connect() as conn:
             return [dict(r) for r in conn.execute(sql, (limit,)).fetchall()]
+
+    def prune(
+        self,
+        now: datetime | None = None,
+        retain_days: int = 7,
+        retain_highlight_days: int = 30,
+    ) -> dict:
+        """Delete frames older than the retention windows.
+
+        Non-highlight frames are dropped after ``retain_days``; highlights live
+        until ``retain_highlight_days``. A non-positive ``retain_days``
+        disables pruning entirely as a safety against accidental wipe.
+        """
+        if retain_days <= 0:
+            return {"deleted_frames": 0, "deleted_bytes": 0, "disabled": True}
+
+        now = now or datetime.now(timezone.utc)
+        cutoff_raw_ms = int((now - timedelta(days=retain_days)).timestamp() * 1000)
+        cutoff_hl_ms = int((now - timedelta(days=max(retain_highlight_days, retain_days))).timestamp() * 1000)
+
+        deleted = 0
+        deleted_bytes = 0
+        with self._lock, self._connect() as conn:
+            rows = conn.execute(
+                "SELECT filename FROM frames"
+                " WHERE (is_highlight = 0 AND ts_epoch_ms < ?)"
+                "    OR (is_highlight = 1 AND ts_epoch_ms < ?)",
+                (cutoff_raw_ms, cutoff_hl_ms),
+            ).fetchall()
+            dirs_to_check: set[Path] = set()
+            for r in rows:
+                fname = r["filename"]
+                p = self.base_dir / fname
+                try:
+                    deleted_bytes += p.stat().st_size
+                    p.unlink()
+                except FileNotFoundError:
+                    pass
+                conn.execute("DELETE FROM frames WHERE filename = ?", (fname,))
+                dirs_to_check.add(p.parent)
+                deleted += 1
+            # Walk up each affected directory tree, removing dirs that became empty.
+            for d in sorted(dirs_to_check, key=lambda x: -len(x.parts)):
+                cur = d
+                while cur != self.base_dir and cur.is_relative_to(self.base_dir):
+                    try:
+                        cur.rmdir()
+                    except OSError:
+                        break
+                    cur = cur.parent
+        return {"deleted_frames": deleted, "deleted_bytes": deleted_bytes}
+
+    def neighbors(self, filename: str) -> dict:
+        """Return adjacent frame filenames by capture time: newer and older."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT ts_epoch_ms FROM frames WHERE filename = ?", (filename,)
+            ).fetchone()
+            if row is None:
+                return {"newer": None, "older": None}
+            ts = row["ts_epoch_ms"]
+            newer = conn.execute(
+                "SELECT filename FROM frames WHERE ts_epoch_ms > ? ORDER BY ts_epoch_ms ASC LIMIT 1",
+                (ts,),
+            ).fetchone()
+            older = conn.execute(
+                "SELECT filename FROM frames WHERE ts_epoch_ms < ? ORDER BY ts_epoch_ms DESC LIMIT 1",
+                (ts,),
+            ).fetchone()
+        return {
+            "newer": newer["filename"] if newer else None,
+            "older": older["filename"] if older else None,
+        }
+
+    def get(self, filename: str) -> dict | None:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT filename, ts_iso, ts_epoch_ms, date, diff_score, is_highlight"
+                " FROM frames WHERE filename = ?",
+                (filename,),
+            ).fetchone()
+        return dict(row) if row else None
 
 
 _store: FrameStore | None = None

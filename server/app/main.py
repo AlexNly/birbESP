@@ -1,5 +1,9 @@
+import asyncio
+import contextlib
+import logging
 import os
 import re
+from contextlib import asynccontextmanager
 from datetime import date as date_cls, datetime, timezone
 from pathlib import Path
 
@@ -12,8 +16,50 @@ from .highlights import get_highlighter
 from .storage import get_store
 
 _APP_DIR = Path(__file__).resolve().parent
+log = logging.getLogger("birbesp")
 
-app = FastAPI(title="birbESP", version="0.1.0")
+
+async def _prune_loop() -> None:
+    interval_s = int(os.environ.get("BIRB_PRUNE_INTERVAL_S", "3600"))
+    retain_days = int(os.environ.get("BIRB_RETAIN_DAYS", "7"))
+    retain_hl_days = int(os.environ.get("BIRB_RETAIN_HIGHLIGHT_DAYS", "30"))
+    if retain_days <= 0:
+        log.info("[prune] retention disabled (BIRB_RETAIN_DAYS=%d)", retain_days)
+        return
+    log.info(
+        "[prune] retention enabled: raw=%dd highlights=%dd interval=%ds",
+        retain_days, retain_hl_days, interval_s,
+    )
+    while True:
+        try:
+            stats = await asyncio.to_thread(
+                get_store().prune,
+                datetime.now(timezone.utc),
+                retain_days,
+                retain_hl_days,
+            )
+            if stats.get("deleted_frames", 0):
+                log.info(
+                    "[prune] dropped %d frames (%.1f MB)",
+                    stats["deleted_frames"], stats["deleted_bytes"] / 1e6,
+                )
+        except Exception:
+            log.exception("[prune] failed")
+        await asyncio.sleep(interval_s)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(_prune_loop())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+
+app = FastAPI(title="birbESP", version="0.1.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=_APP_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=_APP_DIR / "templates")
 

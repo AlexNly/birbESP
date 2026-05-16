@@ -16,3 +16,7 @@ services:
       ESP32_STREAM_URL: ${ESP32_STREAM_URL:-}
       # Mean-abs-difference threshold (0-255) for tagging a frame as a highlight.
       BIRB_HIGHLIGHT_THRESHOLD: ${BIRB_HIGHLIGHT_THRESHOLD:-2.0}
+      # Retention windows. 0 or negative BIRB_RETAIN_DAYS disables pruning.
+      BIRB_RETAIN_DAYS: ${BIRB_RETAIN_DAYS:-7}
+      BIRB_RETAIN_HIGHLIGHT_DAYS: ${BIRB_RETAIN_HIGHLIGHT_DAYS:-30}
+      BIRB_PRUNE_INTERVAL_S: ${BIRB_PRUNE_INTERVAL_S:-3600}
