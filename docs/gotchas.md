@@ -25,6 +25,14 @@ must align perfectly with the connector pads.
 flash chip is fine. The ribbon is the actual culprit ~80 % of the time on
 AI-Thinker boards.
 
+**Best practice for *routine* flashing:** Disconnect the camera ribbon
+entirely before every flash, reconnect after `Hash of data verified` and
+the reset. The OV2640 shares strapping-pin-adjacent traces with the flash
+bus, so even a properly-seated ribbon can occasionally cause flash failures.
+Flashing with the camera detached is faster and 100 % reliable. The
+firmware tolerates the absent camera at flash time — it'll just halt with
+`[cam] init failed: 0x105` until you reconnect and reset.
+
 ## 2. GPIO 4 flash LED will overheat the SPI flash
 
 **Symptom:** Within a few minutes of being powered with factory firmware (or
