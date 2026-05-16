@@ -51,7 +51,7 @@ For the homelab deploy and pointing-the-real-cam-at-it, see
 ## Layout
 
 ```
-docs/        design spec, hardware notes, deploy guide
+docs/        design spec, hardware notes, deploy guide, gotchas (read before debugging!)
 3d-prints/   links to the printed cases
 server/      FastAPI + Docker — receives uploads, hosts the web UI
 firmware/    ESP32-CAM side — PlatformIO + Arduino (TBD)
