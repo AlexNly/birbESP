@@ -32,6 +32,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Local agent state (Claude Code, etc.) — never commit
+.claude/
+
 # Editor
 .idea/
 *.swp
