@@ -9,6 +9,12 @@
       <button id="liveFs" class="live-fs-btn" type="button"
               aria-label="Toggle fullscreen" title="Fullscreen">⛶</button>
     </div>
+    <div class="live-controls">
+      <button id="liveLedBtn" class="live-ctrl-btn" type="button" aria-pressed="false">
+        LED off
+      </button>
+      <span id="liveLedMsg" class="muted small"></span>
+    </div>
     <p class="muted small">Streaming from <code>{{ stream_url }}</code></p>
   {% else %}
     <div class="live-empty">
@@ -64,6 +70,37 @@
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && inFallback()) exit();
+    });
+  })();
+
+  // LED toggle — calls /led/on, /led/off on the cam via nginx proxy.
+  (function () {
+    var btn = document.getElementById('liveLedBtn');
+    var msg = document.getElementById('liveLedMsg');
+    if (!btn) return;
+
+    function paint(state) {
+      var on = state === 'on';
+      btn.classList.toggle('active', on);
+      btn.textContent = on ? 'LED on' : 'LED off';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      msg.textContent = '';
+    }
+    function err(e) {
+      msg.textContent = 'LED control unreachable';
+      btn.disabled = true;
+    }
+
+    fetch('/led').then(function (r) { return r.json(); })
+      .then(function (d) { paint(d.state); })
+      .catch(err);
+
+    btn.addEventListener('click', function () {
+      var target = btn.classList.contains('active') ? '/led/off' : '/led/on';
+      btn.disabled = true;
+      fetch(target).then(function (r) { return r.json(); })
+        .then(function (d) { paint(d.state); btn.disabled = false; })
+        .catch(function (e) { err(e); });
     });
   })();
 </script>
