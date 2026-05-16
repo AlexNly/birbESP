@@ -11,6 +11,11 @@
 #include "config.h"
 
 static WebServer server(HTTP_PORT);
+// Control endpoints (/led/*) run on a separate WebServer instance on
+// HTTP_PORT+1, handled by its own FreeRTOS task on core 0. Necessary because
+// handle_stream() blocks the main Arduino loop on port 80 for as long as a
+// viewer is connected, which would otherwise prevent /led/* from being served.
+static WebServer ctrl_server(HTTP_PORT + 1);
 
 static constexpr const char* kStreamBoundary = "frame";
 static constexpr uint32_t kStreamFrameDelayMs = 50;   // ~20 fps cap
@@ -48,7 +53,9 @@ static void led_send_status() {
   String body = String("{\"state\":\"") + (on ? "on" : "off")
               + "\",\"permanent\":" + (permanent ? "true" : "false")
               + ",\"remaining_ms\":" + remaining_ms + "}";
-  server.send(200, "application/json", body);
+  // Responds on the control server (port 81). The control server is what
+  // dispatched the request, so .send() here writes to the correct client.
+  ctrl_server.send(200, "application/json", body);
 }
 static void handle_led_status()    { led_send_status(); }
 static void handle_led_on()        { led_on(kLedDefaultMs); led_send_status(); }
@@ -69,6 +76,15 @@ static void led_watchdog_task(void* /*arg*/) {
   for (;;) {
     led_check_timeout();
     vTaskDelay(pdMS_TO_TICKS(200));
+  }
+}
+
+// Pumps the control WebServer (port 81). Runs on core 0 so it keeps handling
+// /led/* requests even while handle_stream() blocks the Arduino main loop.
+static void ctrl_http_task(void* /*arg*/) {
+  for (;;) {
+    ctrl_server.handleClient();
+    vTaskDelay(pdMS_TO_TICKS(20));
   }
 }
 
@@ -115,15 +131,23 @@ static void handle_stream() {
 void stream_begin() {
   server.on("/", handle_root);
   server.on("/stream", handle_stream);
-  server.on("/led", handle_led_status);
-  server.on("/led/on", handle_led_on);
-  server.on("/led/on/permanent", handle_led_on_perm);
-  server.on("/led/off", handle_led_off);
   server.onNotFound([]() { server.send(404, "text/plain", "not found"); });
   server.begin();
 
+  // Control endpoints live on a separate port so they keep responding while
+  // /stream holds the main server hostage.
+  ctrl_server.on("/led", handle_led_status);
+  ctrl_server.on("/led/on", handle_led_on);
+  ctrl_server.on("/led/on/permanent", handle_led_on_perm);
+  ctrl_server.on("/led/off", handle_led_off);
+  ctrl_server.onNotFound([]() { ctrl_server.send(404, "text/plain", "not found"); });
+  ctrl_server.begin();
+
   xTaskCreatePinnedToCore(
       led_watchdog_task, "led_wdt", 4096, nullptr, /*priority=*/1, nullptr,
+      /*coreID=*/0);
+  xTaskCreatePinnedToCore(
+      ctrl_http_task,    "ctrl_http", 8192, nullptr, /*priority=*/1, nullptr,
       /*coreID=*/0);
 
   if (WiFi.status() == WL_CONNECTED) {
