@@ -17,6 +17,23 @@
     {% block content %}{% endblock %}
   </main>
 
+  <script>
+    // Format every <time datetime="..."> in the user's locale + timezone.
+    // Server stores UTC ISO; this turns it into something readable
+    // (e.g. "16. Mai 2026, 22:46:10" instead of "2026-05-16T20:46:10.117742+00:00").
+    document.addEventListener('DOMContentLoaded', function () {
+      var fmt = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: false,
+      });
+      document.querySelectorAll('time[datetime]').forEach(function (el) {
+        var d = new Date(el.getAttribute('datetime'));
+        if (!isNaN(d)) el.textContent = fmt.format(d);
+      });
+    });
+  </script>
+
   <nav class="bottomnav">
     <a href="/" class="navlink {% if active == 'home' %}active{% endif %}">
       <span class="navicon">●</span><span>Home</span>

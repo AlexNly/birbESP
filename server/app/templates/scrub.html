@@ -101,7 +101,7 @@
   function startPlay() {
     if (playing || !indices.length) return;
     playing = true;
-    play.textContent = '⏸';
+    play.textContent = '■';
     play.setAttribute('aria-label', 'Pause');
     var tick = function () {
       if (pos >= indices.length - 1) { stopPlay(); return; }
