@@ -1,12 +1,13 @@
 {# Reusable LED control. Drop {% include "_led_control.html" %} into any page;
    static/led.js auto-binds every .led-control on the page. #}
 <div class="led-control" data-led-control>
+  <span class="led-label">LED</span>
   <button class="ios-toggle" type="button" role="switch" aria-checked="false"
           aria-label="Camera LED" data-led-btn>
     <span class="ios-toggle-thumb"></span>
   </button>
   <div class="led-meta">
-    <span class="led-status" data-led-status>LED</span>
+    <span class="led-status" data-led-status>off</span>
     <button class="led-keep-on" type="button" hidden data-led-keep-on>keep on</button>
   </div>
 </div>
