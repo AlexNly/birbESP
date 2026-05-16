@@ -34,7 +34,7 @@ This beats the alternatives because: ESP32-standalone is fine for live view but 
 - Exact ESP32-CAM board variant (assuming AI-Thinker; user to confirm)
 - Wemos 18650 shield version (v1 / v2 / v3) — affects whether 5V boost is always-on or button-toggled
 - Homelab hostname / LAN IP (baked into firmware as upload target)
-- Retention policy — is 7 days of raw frames + 30 days of highlights the right default given homelab storage budget?
+- ~~Retention policy — is 7 days of raw frames + 30 days of highlights the right default given homelab storage budget?~~ **Resolved:** real footage measures ~26 KB/SVGA JPEG → ~2.16 GB/day; production deploy runs `BIRB_RETAIN_DAYS=30` + `BIRB_RETAIN_HIGHLIGHT_DAYS=365` (~66 GB total).
 - "Interesting" threshold for the frame-diff (tune empirically once real frames are flowing)
 - Mount location: indoor through-window vs outdoor sheltered (affects WiFi reach and weather notes in docs)
 - Photo plan — does Alex want a separate "hero shot" of the finished rig for the README?
