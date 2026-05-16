@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import io
 import logging
 import os
 import re
@@ -11,6 +12,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from PIL import Image
 
 from .highlights import get_highlighter
 from .storage import get_store
@@ -71,6 +73,27 @@ def _stream_url() -> str | None:
     return os.environ.get("ESP32_STREAM_URL") or None
 
 
+# PIL's ROTATE_* constants are *counter-clockwise*. Map "clockwise N°" → the
+# equivalent PIL transpose so users can think in normal photographic terms.
+_ROTATE_OPS = {
+    90:  Image.ROTATE_270,
+    180: Image.ROTATE_180,
+    270: Image.ROTATE_90,
+}
+
+
+def _rotate_jpeg(jpeg_bytes: bytes, degrees: int) -> bytes:
+    """Rotate a JPEG payload clockwise by `degrees` (0/90/180/270)."""
+    op = _ROTATE_OPS.get(degrees % 360)
+    if op is None:
+        return jpeg_bytes
+    with Image.open(io.BytesIO(jpeg_bytes)) as im:
+        rotated = im.transpose(op)
+        buf = io.BytesIO()
+        rotated.save(buf, format="JPEG", quality=88)
+        return buf.getvalue()
+
+
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
     return {"status": "ok"}
@@ -83,6 +106,11 @@ async def upload(image: UploadFile = File(...)) -> JSONResponse:
     payload = await image.read()
     if not payload:
         raise HTTPException(400, "Empty upload")
+    # Server-side rotation for sensors mounted at non-zero physical angles.
+    # 0/90/180/270 (clockwise). Other values are silently ignored.
+    rotation = int(os.environ.get("BIRB_ROTATE", "0"))
+    if rotation:
+        payload = await asyncio.to_thread(_rotate_jpeg, payload, rotation)
     row = get_store().save_frame(payload, ts=datetime.now(timezone.utc))
     diff_score, is_highlight = get_highlighter().score(payload)
     get_store().mark_highlight(row["filename"], diff_score, is_highlight)
