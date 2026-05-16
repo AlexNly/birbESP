@@ -17,7 +17,7 @@ enjoy from her phone, and as a documented maker project for everyone else.
 | Spec        | ✅ written                                                             |
 | Server      | ✅ scaffold, upload, highlights, mobile UI, docker-compose             |
 | Tools       | ✅ `fake_cam.py` for hardware-free UX iteration                        |
-| Firmware    | ⏳ next milestone                                                      |
+| Firmware    | ✅ WiFi + SVGA cam + 1 Hz uploader + MJPEG `/stream` + mDNS (assumes AI-Thinker pinout — confirm before flashing) |
 | Build log   | ⏳ add photos as the rig comes together (`docs/photos/`, `build-log.md`) |
 
 ## Quickstart (no hardware needed)
