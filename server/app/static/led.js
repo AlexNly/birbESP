@@ -22,9 +22,7 @@
 
     function paint(d) {
       var on = d.state === 'on';
-      btn.classList.toggle('active', on);
-      btn.textContent = on ? 'LED on' : 'LED off';
-      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.setAttribute('aria-checked', on ? 'true' : 'false');
       btn.disabled = false;
 
       if (on && d.permanent) {
@@ -34,14 +32,14 @@
         clearPoll();
       } else if (on) {
         var s = Math.max(1, Math.ceil((d.remaining_ms || 0) / 1000));
-        status.textContent = 'auto-off in ' + s + 's';
+        status.textContent = 'on · auto-off in ' + s + 's';
         status.className = 'led-status';
         keep.hidden = false;
         keep.disabled = false;
         startPoll();
       } else {
-        status.textContent = '';
-        status.className = 'led-status';
+        status.textContent = 'off';
+        status.className = 'led-status muted';
         keep.hidden = true;
         clearPoll();
       }
@@ -60,7 +58,8 @@
     }
 
     btn.addEventListener('click', function () {
-      var target = btn.classList.contains('active') ? '/led/off' : '/led/on';
+      var isOn = btn.getAttribute('aria-checked') === 'true';
+      var target = isOn ? '/led/off' : '/led/on';
       btn.disabled = true;
       fetch(target, { cache: 'no-store' })
         .then(function (r) { return r.json(); })

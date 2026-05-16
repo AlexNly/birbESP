@@ -130,31 +130,46 @@ a { color: inherit; text-decoration: none; }
 
 /* Reusable LED control — used on home page and live page via _led_control.html */
 .led-control {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  display: flex; align-items: center; gap: 12px;
   margin-top: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--bg-elev);
 }
-.led-btn {
-  padding: 10px 16px;
-  background: transparent; color: var(--fg-muted);
-  border: 1px solid var(--border); border-radius: 10px;
-  font: inherit; font-size: 14px; font-weight: 600;
-  cursor: pointer; flex-shrink: 0;
+
+/* iOS-style toggle switch (role=switch, aria-checked drives the state). */
+.ios-toggle {
+  position: relative; flex-shrink: 0;
+  width: 51px; height: 31px;
+  border: none; padding: 0;
+  border-radius: 31px;
+  background: #3a3f47;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.led-btn.active {
-  background: var(--accent); color: #1c1208;
-  border-color: var(--accent);
+.ios-toggle[aria-checked="true"] { background: var(--accent); }
+.ios-toggle[disabled] { opacity: 0.55; cursor: not-allowed; }
+.ios-toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 27px; height: 27px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease;
+  pointer-events: none;
 }
-.led-btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.ios-toggle[aria-checked="true"] .ios-toggle-thumb {
+  transform: translateX(20px);
+}
+
 .led-meta {
   display: flex; align-items: center; gap: 10px;
   flex: 1; min-width: 0;
   font-size: 13px;
 }
-.led-status { color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.led-status { color: var(--fg); font-variant-numeric: tabular-nums; }
+.led-status.muted { color: var(--fg-muted); }
 .led-status.warning { color: var(--accent); font-weight: 600; }
 .led-keep-on {
   background: transparent; color: var(--accent);
