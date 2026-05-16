@@ -5,6 +5,8 @@
 #include <WebServer.h>
 #include <WiFi.h>
 #include <esp_camera.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 
 #include "config.h"
 
@@ -59,6 +61,17 @@ static void led_check_timeout() {
   }
 }
 
+// Dedicated watchdog task pinned to core 0 (system core). Necessary because
+// handle_stream() blocks the Arduino loop on core 1 for as long as a viewer
+// is connected — without this task, led_check_timeout() would never run
+// while the live stream is active and the LED would stay on indefinitely.
+static void led_watchdog_task(void* /*arg*/) {
+  for (;;) {
+    led_check_timeout();
+    vTaskDelay(pdMS_TO_TICKS(200));
+  }
+}
+
 static void handle_root() {
   String body =
     "<!DOCTYPE html><meta name=viewport content='width=device-width,initial-scale=1'>"
@@ -108,6 +121,10 @@ void stream_begin() {
   server.on("/led/off", handle_led_off);
   server.onNotFound([]() { server.send(404, "text/plain", "not found"); });
   server.begin();
+
+  xTaskCreatePinnedToCore(
+      led_watchdog_task, "led_wdt", 4096, nullptr, /*priority=*/1, nullptr,
+      /*coreID=*/0);
 
   if (WiFi.status() == WL_CONNECTED) {
     if (MDNS.begin(MDNS_HOSTNAME)) {
