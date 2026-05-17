@@ -171,29 +171,37 @@ prints its IP at boot in the serial log:
 Set the homelab's `ESP32_STREAM_URL` to `http://192.168.178.XXX/stream`
 instead of `http://birb.local/stream`.
 
-## 10. UXGA at default XCLK hangs the cam (EV-EOF-OVF)
+## 10. Larger framesizes hang the cam at default XCLK (EV-EOF-OVF)
 
-**Symptom:** After bumping the camera config to `FRAMESIZE_UXGA` (1600×1200),
-the cam logs `cam_hal: EV-EOF-OVF` and `camera_fb_get returned null`, then
-becomes unresponsive on every port (`/stream`, `/led`, even ping). Reboot
-brings it back briefly until it locks up again.
+**Symptom:** After bumping the camera config above SVGA (any of XGA, SXGA,
+UXGA), the cam logs `cam_hal: EV-EOF-OVF` and `camera_fb_get returned null`,
+then becomes unresponsive on every port (`/stream`, `/led`, even ping).
+Reboot brings it back briefly until it locks up again. `/stream` returns
+HTTP 200 but a zero-byte body.
 
-**Cause:** UXGA shifts pixels too fast for the AI-Thinker board's I²S DMA at
-the default 20 MHz XCLK — the FIFO overflows mid-frame. SXGA (1280×1024) and
-smaller are fine at 20 MHz; UXGA needs the XCLK halved.
+**Cause:** Larger framesizes shift pixels faster than the AI-Thinker board's
+I²S DMA can drain at 20 MHz XCLK — the sensor FIFO overflows mid-frame. The
+threshold is **module-dependent**: some AI-Thinker modules tolerate SXGA at
+20 MHz, others overflow even at SXGA and need the halved XCLK. UXGA needs
+10 MHz on every module.
 
-**Fix:** In `firmware/src/config.h`, either drop the framesize:
-```c
-#define CAM_FRAMESIZE  FRAMESIZE_SXGA
-#define CAM_XCLK_HZ    20000000
+**Fix:** Pair each framesize with a safe XCLK in `firmware/src/config.h`:
+
+| Framesize | Safe XCLK |
+|---|---|
+| `FRAMESIZE_SVGA` / `FRAMESIZE_XGA` | `20000000` |
+| `FRAMESIZE_SXGA` / `FRAMESIZE_UXGA` | `10000000` |
+
+Defaults shipped in `config.h` are `FRAMESIZE_SXGA` + `10000000` — universally
+safe across module variants, still 2.7× the pixel count of original SVGA. At
+1 fps capture cadence the halved XCLK readout speed is invisible.
+
+**Debug it directly:** if the cam comes up but the stream hangs, this is
+almost always the culprit. Confirm with:
+```sh
+curl -s -m 5 -o /tmp/x.jpg -w "%{http_code} %{size_download}\n" http://<cam>/stream
+# HTTP 200 with size_download 0 = DMA overflow; drop XCLK and re-flash.
 ```
-…or, if you really want UXGA, halve the XCLK:
-```c
-#define CAM_FRAMESIZE  FRAMESIZE_UXGA
-#define CAM_XCLK_HZ    10000000
-```
-SXGA at 20 MHz is the recommended default — still 2.7× the pixel count of the
-original SVGA without any DMA risk.
 
 ---
 

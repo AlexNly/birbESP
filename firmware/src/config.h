@@ -15,17 +15,24 @@
 // ---- Camera tuning ----------------------------------------------------------
 //
 // Frame size on the OV2640. Bigger = more detail, more bytes per JPEG.
-// Safe combos that don't trigger DMA EV-EOF-OVF on AI-Thinker boards:
-//   FRAMESIZE_SVGA  (800x600)    @ 20 MHz XCLK  — original config
+// Some AI-Thinker module variants are more DMA-sensitive than others; the
+// safe-for-everyone defaults pair each framesize with the XCLK that keeps
+// the I²S DMA from overflowing (cam_hal: EV-EOF-OVF):
+//
+//   FRAMESIZE_SVGA  (800x600)    @ 20 MHz XCLK  — original baseline
 //   FRAMESIZE_XGA   (1024x768)   @ 20 MHz XCLK  — modest bump
-//   FRAMESIZE_SXGA  (1280x1024)  @ 20 MHz XCLK  — recommended, ~7 GB/day
-//   FRAMESIZE_UXGA  (1600x1200)  @ 10 MHz XCLK  — only viable with halved XCLK
+//   FRAMESIZE_SXGA  (1280x1024)  @ 10 MHz XCLK  — default; 2.7x SVGA pixels
+//   FRAMESIZE_UXGA  (1600x1200)  @ 10 MHz XCLK  — max; some modules still hang
+//
+// At 1 fps capture cadence the halved XCLK readout speed is invisible —
+// the sensor still produces a frame in a few hundred ms.
 #define CAM_FRAMESIZE   FRAMESIZE_SXGA
 
-// XCLK feeding the sensor. 20 MHz is the AI-Thinker default and works for
-// everything up to SXGA. UXGA needs 10 MHz or the I²S DMA falls behind and
-// the cam hangs.
-#define CAM_XCLK_HZ     20000000
+// XCLK feeding the sensor. 10 MHz is universally compatible at SXGA and
+// UXGA across AI-Thinker module revisions. Bump to 20 MHz only if you're
+// staying at SVGA/XGA and want maximum sensor framerate (irrelevant at
+// our 1 fps upload cadence).
+#define CAM_XCLK_HZ     10000000
 
 // JPEG quality on the OV2640 scale (0=best, 63=worst). 8 is the sweet spot
 // for SXGA/UXGA; 12 is what the spec originally asked for at SVGA.
