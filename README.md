@@ -16,8 +16,9 @@ NixOS homelab that catches every visit.
 - Mobile-first web UI: live MJPEG, highlights reel, full gallery,
   video-scrubber for fast review, per-frame download.
 - LED control from the phone with a 30-second auto-off.
-- LAN-only behind nginx + AdGuard DNS. HTTPS for browsers; plain HTTP on
-  the LAN for the cam's uploads so 1 fps isn't crushed by TLS handshakes.
+- LAN-only behind nginx + a local DNS rewrite. HTTPS for browsers; plain
+  HTTP on the LAN for the cam's uploads so 1 fps isn't crushed by TLS
+  handshakes.
 
 ## Captures
 
@@ -97,8 +98,9 @@ Browser  ──HTTPS──►  nginx  ──►  birbESP container (FastAPI, SQL
                        └─ /stream proxy ◄─┘   (MJPEG, live view)
 ```
 
-Same `birb.ncly.de` for everything browser-facing; cam talks plain HTTP
-on a dual-bound container port so TLS handshake cost doesn't kill 1 fps.
+Same hostname (`birb.local` via mDNS, or whichever DNS name you give the
+container) for everything browser-facing; cam talks plain HTTP on a
+dual-bound container port so TLS handshake cost doesn't kill 1 fps.
 
 ## Quickstart (no hardware required)
 

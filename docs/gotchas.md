@@ -122,7 +122,7 @@ fragile on this hardware.
 
 ## 7. ESP32 HTTPS uploads are too slow for 1 fps
 
-**Symptom:** If you point the cam's `UPLOAD_URL` at `https://birb.ncly.de/...`
+**Symptom:** If you point the cam's `UPLOAD_URL` at `https://&lt;your-domain&gt;/...`
 instead of plain HTTP, uploads happen but at maybe 0.3 fps, with TLS handshake
 warnings filling the serial monitor.
 
@@ -132,14 +132,14 @@ request (HTTPClient doesn't reuse connections by default). Handshake is
 
 **Fix:** Use **dual-port plain HTTP** on the homelab. The container binds
 both `127.0.0.1:8810` (for the nginx → HTTPS public path) and
-`192.168.178.124:8810` (LAN-only plain HTTP for the cam). Cam uses the LAN
-URL; phones still get HTTPS through `https://birb.ncly.de`.
+`&lt;homelab-ip&gt;:8810` (LAN-only plain HTTP for the cam). Cam uses the LAN
+URL; phones still get HTTPS through `https://&lt;your-domain&gt;`.
 
 ## 8. `url_for` behind an HTTPS reverse proxy generates http:// links
 
-**Symptom:** The page loads at `https://birb.ncly.de/` but appears completely
+**Symptom:** The page loads at `https://&lt;your-domain&gt;/` but appears completely
 unstyled — raw HTML look, default fonts, blue underlined links. View-source
-shows `<link rel="stylesheet" href="http://birb.ncly.de/static/style.css">`.
+shows `<link rel="stylesheet" href="http://&lt;your-domain&gt;/static/style.css">`.
 
 **Cause:** FastAPI sees the request as plain HTTP (nginx terminates TLS and
 forwards as HTTP to the container). `Jinja2Templates.url_for()` generates an
@@ -166,9 +166,9 @@ systems, enterprise WiFi) block multicast DNS or rewrite `.local` queries.
 **Fix:** Use the cam's explicit IP address instead of `birb.local`. The cam
 prints its IP at boot in the serial log:
 ```
-[wifi] connected, ip=192.168.178.XXX rssi=-50
+[wifi] connected, ip=&lt;cam-ip&gt; rssi=-50
 ```
-Set the homelab's `ESP32_STREAM_URL` to `http://192.168.178.XXX/stream`
+Set the homelab's `ESP32_STREAM_URL` to `http://&lt;cam-ip&gt;/stream`
 instead of `http://birb.local/stream`.
 
 ## 10. Larger framesizes hang the cam at default XCLK (EV-EOF-OVF)
