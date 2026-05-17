@@ -1,38 +1,106 @@
+<p align="center">
+  <img src="docs/photos/09-bird-portrait.jpg" alt="A tit at the feeder, captured by the cam" width="640">
+</p>
+
 # birbESP
 
-A weekend bird-watching cam, built for two.
+A weekend project. An AI-Thinker ESP32-CAM strapped to a balcony trellis,
+pointed at a wooden bird feeder, with a mobile-first web app on a small
+NixOS homelab that catches every visit.
 
-An ESP32-CAM points at a bird feeder, captures one frame per second, streams a
-live MJPEG view, and uploads stills to a NixOS + Docker homelab. The homelab
-hosts a mobile-first web app with a **live** view and a server-curated
-**highlights** reel of recent bird activity — built primarily for one person to
-enjoy from her phone, and as a documented maker project for everyone else.
+## What it does
 
-> 📐 Design spec: [`docs/specs/birb-esp.md`](docs/specs/birb-esp.md)
+- 1 fps capture, 24/7, uploaded over the LAN.
+- Server-side highlight detection (per-frame diff) — empty-feeder shots
+  stay out of the way; visits stand out.
+- Mobile-first web UI: live MJPEG, highlights reel, full gallery,
+  video-scrubber for fast review, per-frame download.
+- LED control from the phone with a 30-second auto-off.
+- LAN-only behind nginx + AdGuard DNS. HTTPS for browsers; plain HTTP on
+  the LAN for the cam's uploads so 1 fps isn't crushed by TLS handshakes.
 
-## Status
+## Captures
 
-| Component   | State                                                                 |
-|-------------|-----------------------------------------------------------------------|
-| Spec        | ✅ written                                                             |
-| Server      | ✅ scaffold, upload, highlights, mobile UI, docker-compose, retention, per-frame Download |
-| Tools       | ✅ `fake_cam.py` for hardware-free UX iteration                        |
-| Firmware    | ✅ WiFi + SVGA cam + 1 Hz uploader + MJPEG `/stream` + mDNS (assumes AI-Thinker pinout — confirm before flashing) |
-| Build log   | ⏳ add photos as the rig comes together (`docs/photos/`, `build-log.md`) |
+<table>
+  <tr>
+    <td width="50%"><img src="docs/photos/09-bird-portrait.jpg" alt=""></td>
+    <td width="50%"><img src="docs/photos/10-bird-standing.jpg" alt=""></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/photos/11-bird-feeding.jpg" alt=""></td>
+    <td width="50%"><img src="docs/photos/12-bird-action.jpg" alt=""></td>
+  </tr>
+</table>
 
-### Retention defaults
+## Web app
 
-Non-highlight frames are dropped after **7 days**; highlights survive **30
-days**. Override via `BIRB_RETAIN_DAYS` / `BIRB_RETAIN_HIGHLIGHT_DAYS`. Set
-`BIRB_RETAIN_DAYS=0` (or negative) to **disable** pruning entirely.
+<table>
+  <tr>
+    <td align="center" width="20%"><img src="docs/photos/ui-01-home.png" width="180" alt=""><br><sub>Home</sub></td>
+    <td align="center" width="20%"><img src="docs/photos/ui-02-live.png" width="180" alt=""><br><sub>Live</sub></td>
+    <td align="center" width="20%"><img src="docs/photos/ui-03-highlights.png" width="180" alt=""><br><sub>Highlights</sub></td>
+    <td align="center" width="20%"><img src="docs/photos/ui-04-gallery.png" width="180" alt=""><br><sub>Gallery</sub></td>
+    <td align="center" width="20%"><img src="docs/photos/ui-05-frame-detail.png" width="180" alt=""><br><sub>Frame detail</sub></td>
+  </tr>
+</table>
 
-### Phone download
+- **Home** — latest still, Watch Live, Scrub, LED toggle, recent highlights.
+- **Live** — MJPEG with fullscreen and the LED auto-off countdown.
+- **Highlights** — auto-curated reel of frames where motion was detected.
+- **Gallery** — every frame, by day, paginated.
+- **Frame detail** — full image, Download, and a neighbouring-frame
+  scrubber to see what happened in the seconds around a visit.
 
-Tapping any thumbnail opens a frame detail page with a big **⬇ Download**
-button (saves to Files / Downloads via the `download` attribute). On iOS, you
-can also long-press the image itself to save directly to **Photos**.
+## Build
 
-## Quickstart (no hardware needed)
+<p align="center"><img src="docs/photos/01-parts-overview.jpg" width="640" alt=""></p>
+
+Two soldered wires (5 V + GND from the Wemos 18650 shield to the cam),
+one micro-USB cable for charging, a fabric tie for the cam mount, a
+zip-tie for the battery pack. Both cases printed on a regular FDM
+printer; no supports.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/photos/02-wemos-shield-with-cell.jpg" alt=""></td>
+    <td width="50%"><img src="docs/photos/03-bench-test.jpg" alt=""></td>
+  </tr>
+</table>
+
+## Installed
+
+<p align="center"><img src="docs/photos/05-installation-overview.jpg" width="640" alt=""></p>
+
+Cam strapped to a balcony trellis a few centimetres from the feeder.
+Battery pack zip-tied under the overhead trellis, USB-C trailing back
+through the window to a wall charger — the Wemos shield runs as a UPS,
+so the cell trickle-charges from mains while the cam runs from the
+boosted 5 V rail. Brief power blips don't reboot the cam.
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/photos/06-mount-detail.jpg" alt=""></td>
+    <td width="33%"><img src="docs/photos/07-battery-pack-mounted.jpg" alt=""></td>
+    <td width="33%"><img src="docs/photos/08-battery-charging.jpg" alt=""></td>
+  </tr>
+</table>
+
+## Architecture
+
+```
+Browser  ──HTTPS──►  nginx  ──►  birbESP container (FastAPI, SQLite index)
+                       ▲                  ▲
+                       │                  │ stores 1 fps JPEGs
+                       │                  │
+                       │              ESP32-CAM  ──HTTP──►  /api/upload
+                       │                  │
+                       └─ /stream proxy ◄─┘   (MJPEG, live view)
+```
+
+Same `birb.ncly.de` for everything browser-facing; cam talks plain HTTP
+on a dual-bound container port so TLS handshake cost doesn't kill 1 fps.
+
+## Quickstart (no hardware required)
 
 ```sh
 cd server && docker compose up --build &
@@ -41,28 +109,27 @@ pip install -r tools/requirements.txt
 python tools/fake_cam.py --url http://localhost:8080/api/upload
 ```
 
-Open <http://localhost:8080/> on your phone (use your laptop's LAN IP) and you
-should see synthetic frames ticking in, with the occasional "highlight" when
-a fake bird appears.
-
-For the homelab deploy and pointing-the-real-cam-at-it, see
-[`docs/deploy.md`](docs/deploy.md).
+Open `http://localhost:8080/` from a phone via the host's LAN IP — fake
+frames will appear, highlight tagging works as if the real cam were on.
 
 ## Layout
 
 ```
-docs/        design spec, hardware notes, deploy guide, gotchas (read before debugging!)
+docs/        spec, hardware notes, deploy guide, gotchas, photos
 3d-prints/   links to the printed cases
 server/      FastAPI + Docker — receives uploads, hosts the web UI
-firmware/    ESP32-CAM side — PlatformIO + Arduino (TBD)
-tools/       development helpers (e.g. fake_cam.py)
+firmware/    ESP32-CAM side — PlatformIO + Arduino
+tools/       development helpers (fake_cam.py)
 ```
 
-## Hardware
+## Docs
 
-See [`docs/hardware.md`](docs/hardware.md) for BOM and flashing notes.
-Printed parts live in [`3d-prints/`](3d-prints/).
+- [`docs/specs/birb-esp.md`](docs/specs/birb-esp.md) — design spec
+- [`docs/hardware.md`](docs/hardware.md) — BOM, wiring, flashing
+- [`docs/deploy.md`](docs/deploy.md) — local dev + homelab deploy
+- [`docs/gotchas.md`](docs/gotchas.md) — hard-won lessons from the build
+- [`3d-prints/`](3d-prints/) — links to the printed cases
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT. See [`LICENSE`](LICENSE).
