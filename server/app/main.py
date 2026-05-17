@@ -204,6 +204,14 @@ def api_frames(since: int, until: int, max: int = 2400) -> JSONResponse:
     return JSONResponse(get_store().list_in_range(since, until, max_count=max))
 
 
+@app.get("/api/frames_around")
+def api_frames_around(filename: str, radius: int = 30) -> JSONResponse:
+    if not _FRAME_RE.match(filename):
+        raise HTTPException(404, "Not found")
+    radius = max(1, min(radius, 600))
+    return JSONResponse({"frames": get_store().list_around(filename, radius)})
+
+
 @app.get("/scrub", response_class=HTMLResponse)
 def scrub_page(request: Request, hours: float = 3.0) -> HTMLResponse:
     hours = max(0.25, min(hours, 24.0))

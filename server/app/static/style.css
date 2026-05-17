@@ -269,6 +269,14 @@ body.live-fs-fallback .live-fs-btn {
 
 .frame-detail { display: flex; flex-direction: column; gap: 12px; }
 .dl-hint { text-align: center; margin: 4px 0 0; }
+.neighbor-scrub {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.neighbor-scrub .scrub-bar { height: 40px; }
+.neighbor-scrub p { margin: 0; text-align: center; }
 
 /* Scrub view */
 .scrub { display: flex; flex-direction: column; gap: 12px; }

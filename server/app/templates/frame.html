@@ -5,17 +5,24 @@
 <section class="frame-detail">
   <a href="/gallery?date={{ frame.date }}" class="muted-link small">←&nbsp;back to <time datetime="{{ frame.ts_iso }}" data-fmt="date">{{ frame.date }}</time></a>
 
-  <img class="hero-img" src="/frames/{{ frame.filename }}" alt="frame {{ frame.ts_iso }}">
+  <img class="hero-img" id="frameImg" src="/frames/{{ frame.filename }}" alt="frame {{ frame.ts_iso }}">
 
   <p class="hero-meta">
-    <time datetime="{{ frame.ts_iso }}">{{ frame.ts_iso[:19] }}</time>
-    {% if frame.is_highlight %}<span class="pill pill-star">★ highlight</span>{% endif %}
+    <time id="frameTs" datetime="{{ frame.ts_iso }}">{{ frame.ts_iso[:19] }}</time>
+    <span id="frameHl" class="pill pill-star" {% if not frame.is_highlight %}hidden{% endif %}>★ highlight</span>
     {% if frame.diff_score is not none %}
-      <span class="small muted">diff = {{ '%.2f' | format(frame.diff_score) }}</span>
+      <span id="frameDiff" class="small muted">diff = {{ '%.2f' | format(frame.diff_score) }}</span>
+    {% else %}
+      <span id="frameDiff" class="small muted"></span>
     {% endif %}
   </p>
 
-  <a class="cta" href="/frames/{{ frame.filename }}" download="{{ download_name }}">⬇ Download</a>
+  <div id="neighborScrub" class="neighbor-scrub" hidden>
+    <input id="neighborBar" class="scrub-bar" type="range" min="0" max="60" value="30">
+    <p id="neighborInfo" class="muted small"></p>
+  </div>
+
+  <a class="cta" id="frameDl" href="/frames/{{ frame.filename }}" download="{{ download_name }}">⬇ Download</a>
 
   <p class="small muted dl-hint">Tip: long-press the image to save it directly to Photos.</p>
 
@@ -29,4 +36,69 @@
     {% else %}<span></span>{% endif %}
   </nav>
 </section>
+
+<script>
+(function () {
+  var ORIG = {{ frame.filename | tojson }};
+  var img   = document.getElementById('frameImg');
+  var ts    = document.getElementById('frameTs');
+  var hl    = document.getElementById('frameHl');
+  var diff  = document.getElementById('frameDiff');
+  var dl    = document.getElementById('frameDl');
+  var box   = document.getElementById('neighborScrub');
+  var bar   = document.getElementById('neighborBar');
+  var info  = document.getElementById('neighborInfo');
+
+  var fullFmt = new Intl.DateTimeFormat(undefined, {
+    year: 'numeric', month: 'short', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  });
+
+  var frames = [];
+  var centerIdx = 0;
+
+  function dlName(iso) {
+    return 'birbESP-' + iso.slice(0, 10) + 'T' + iso.slice(11, 19).replace(/:/g, '-') + '.jpg';
+  }
+  function offsetLabel(secs) {
+    if (secs === 0) return 'this is the frame you opened';
+    var abs = Math.abs(secs);
+    var unit = abs === 1 ? 'second' : 'seconds';
+    return secs > 0
+      ? abs + ' ' + unit + ' after the opened frame'
+      : abs + ' ' + unit + ' before the opened frame';
+  }
+  function paint(idx) {
+    var f = frames[idx];
+    img.src = '/frames/' + f.filename;
+    ts.setAttribute('datetime', f.ts_iso);
+    ts.textContent = fullFmt.format(new Date(f.ts_iso));
+    hl.hidden = !f.is_highlight;
+    diff.textContent = f.diff_score != null ? 'diff = ' + f.diff_score.toFixed(2) : '';
+    dl.href = '/frames/' + f.filename;
+    dl.setAttribute('download', dlName(f.ts_iso));
+    var deltaSec = Math.round((f.ts_epoch_ms - frames[centerIdx].ts_epoch_ms) / 1000);
+    info.textContent = offsetLabel(deltaSec);
+  }
+
+  fetch('/api/frames_around?filename=' + encodeURIComponent(ORIG) + '&radius=30',
+        { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      frames = (data && data.frames) || [];
+      if (frames.length < 2) return;   // nothing to scrub
+      centerIdx = frames.findIndex(function (f) { return f.filename === ORIG; });
+      if (centerIdx < 0) centerIdx = Math.floor(frames.length / 2);
+      bar.min = 0;
+      bar.max = frames.length - 1;
+      bar.value = centerIdx;
+      box.hidden = false;
+      info.textContent = offsetLabel(0);
+      bar.addEventListener('input', function () {
+        paint(parseInt(bar.value, 10));
+      });
+    })
+    .catch(function () { /* leave scrub hidden if API fails */ });
+})();
+</script>
 {% endblock %}

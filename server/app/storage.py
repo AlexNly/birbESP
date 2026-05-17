@@ -231,6 +231,27 @@ class FrameStore:
                     cur = cur.parent
         return {"deleted_frames": deleted, "deleted_bytes": deleted_bytes}
 
+    def list_around(self, filename: str, radius: int = 30) -> list[dict]:
+        """Return up to `radius` frames before + the center + up to `radius`
+        frames after, in chronological order (oldest first)."""
+        center = self.get(filename)
+        if center is None:
+            return []
+        ts_ms = center["ts_epoch_ms"]
+        cols = "filename, ts_iso, ts_epoch_ms, date, diff_score, is_highlight"
+        with self._connect() as conn:
+            older = conn.execute(
+                f"SELECT {cols} FROM frames WHERE ts_epoch_ms < ?"
+                " ORDER BY ts_epoch_ms DESC LIMIT ?",
+                (ts_ms, radius),
+            ).fetchall()
+            newer = conn.execute(
+                f"SELECT {cols} FROM frames WHERE ts_epoch_ms > ?"
+                " ORDER BY ts_epoch_ms ASC LIMIT ?",
+                (ts_ms, radius),
+            ).fetchall()
+        return [dict(r) for r in reversed(older)] + [center] + [dict(r) for r in newer]
+
     def neighbors(self, filename: str) -> dict:
         """Return adjacent frame filenames by capture time: newer and older."""
         with self._connect() as conn:
