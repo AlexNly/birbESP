@@ -171,6 +171,30 @@ prints its IP at boot in the serial log:
 Set the homelab's `ESP32_STREAM_URL` to `http://192.168.178.XXX/stream`
 instead of `http://birb.local/stream`.
 
+## 10. UXGA at default XCLK hangs the cam (EV-EOF-OVF)
+
+**Symptom:** After bumping the camera config to `FRAMESIZE_UXGA` (1600×1200),
+the cam logs `cam_hal: EV-EOF-OVF` and `camera_fb_get returned null`, then
+becomes unresponsive on every port (`/stream`, `/led`, even ping). Reboot
+brings it back briefly until it locks up again.
+
+**Cause:** UXGA shifts pixels too fast for the AI-Thinker board's I²S DMA at
+the default 20 MHz XCLK — the FIFO overflows mid-frame. SXGA (1280×1024) and
+smaller are fine at 20 MHz; UXGA needs the XCLK halved.
+
+**Fix:** In `firmware/src/config.h`, either drop the framesize:
+```c
+#define CAM_FRAMESIZE  FRAMESIZE_SXGA
+#define CAM_XCLK_HZ    20000000
+```
+…or, if you really want UXGA, halve the XCLK:
+```c
+#define CAM_FRAMESIZE  FRAMESIZE_UXGA
+#define CAM_XCLK_HZ    10000000
+```
+SXGA at 20 MHz is the recommended default — still 2.7× the pixel count of the
+original SVGA without any DMA risk.
+
 ---
 
 *If you discover a new gotcha while building or maintaining this, please add

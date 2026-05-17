@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <esp_camera.h>
 
+#include "config.h"
+
 // AI-Thinker ESP32-CAM pin assignment (same as Espressif's CameraWebServer
 // CAMERA_MODEL_AI_THINKER block).
 #define PWDN_GPIO_NUM     32
@@ -42,26 +44,23 @@ esp_err_t camera_begin() {
   cfg.pin_sccb_scl  = SIOC_GPIO_NUM;
   cfg.pin_pwdn      = PWDN_GPIO_NUM;
   cfg.pin_reset     = RESET_GPIO_NUM;
-  cfg.xclk_freq_hz  = 20000000;
+  cfg.xclk_freq_hz  = CAM_XCLK_HZ;
   cfg.pixel_format  = PIXFORMAT_JPEG;
 
-  // PSRAM is present on AI-Thinker boards: go for full UXGA at low compression.
-  // UXGA (1600×1200, ~130 KB per JPEG at quality 8) gives ~4× the pixel detail
-  // of the old SVGA — bird species become identifiable instead of just blobs.
-  // Storage impact: ~11 GB/day vs the old ~2 GB/day; still well under typical
-  // homelab disk budgets.
+  // PSRAM-backed double-buffered config — see config.h for the framesize /
+  // XCLK / quality combo and the safe pairings.
   if (psramFound()) {
-    cfg.frame_size  = FRAMESIZE_UXGA;   // 1600x1200
-    cfg.jpeg_quality = 8;               // 0=best...63=worst; 8 is the sweet spot
-    cfg.fb_count    = 2;
-    cfg.fb_location = CAMERA_FB_IN_PSRAM;
-    cfg.grab_mode   = CAMERA_GRAB_LATEST;
+    cfg.frame_size   = CAM_FRAMESIZE;
+    cfg.jpeg_quality = CAM_JPEG_QUALITY;
+    cfg.fb_count     = 2;
+    cfg.fb_location  = CAMERA_FB_IN_PSRAM;
+    cfg.grab_mode    = CAMERA_GRAB_LATEST;
   } else {
-    cfg.frame_size  = FRAMESIZE_VGA;
+    cfg.frame_size   = FRAMESIZE_VGA;
     cfg.jpeg_quality = 12;
-    cfg.fb_count    = 1;
-    cfg.fb_location = CAMERA_FB_IN_DRAM;
-    cfg.grab_mode   = CAMERA_GRAB_WHEN_EMPTY;
+    cfg.fb_count     = 1;
+    cfg.fb_location  = CAMERA_FB_IN_DRAM;
+    cfg.grab_mode    = CAMERA_GRAB_WHEN_EMPTY;
   }
 
   esp_err_t err = esp_camera_init(&cfg);
@@ -96,6 +95,7 @@ esp_err_t camera_begin() {
     s->set_colorbar(s, 0);                  // no test bar
     s->set_special_effect(s, 0);            // 0 = none
   }
-  Serial.println("[cam] init ok (UXGA, JPEG q8)");
+  Serial.printf("[cam] init ok (framesize=%d, xclk=%d Hz, jpeg_q=%d)\n",
+                (int)CAM_FRAMESIZE, (int)CAM_XCLK_HZ, (int)CAM_JPEG_QUALITY);
   return ESP_OK;
 }
