@@ -45,16 +45,20 @@ esp_err_t camera_begin() {
   cfg.xclk_freq_hz  = 20000000;
   cfg.pixel_format  = PIXFORMAT_JPEG;
 
-  // PSRAM is present on AI-Thinker boards: prefer larger framebuffer and SVGA.
+  // PSRAM is present on AI-Thinker boards: go for full UXGA at low compression.
+  // UXGA (1600×1200, ~130 KB per JPEG at quality 8) gives ~4× the pixel detail
+  // of the old SVGA — bird species become identifiable instead of just blobs.
+  // Storage impact: ~11 GB/day vs the old ~2 GB/day; still well under typical
+  // homelab disk budgets.
   if (psramFound()) {
-    cfg.frame_size  = FRAMESIZE_SVGA;   // 800x600
-    cfg.jpeg_quality = 12;              // 0=best...63=worst; 12 is a good midpoint
+    cfg.frame_size  = FRAMESIZE_UXGA;   // 1600x1200
+    cfg.jpeg_quality = 8;               // 0=best...63=worst; 8 is the sweet spot
     cfg.fb_count    = 2;
     cfg.fb_location = CAMERA_FB_IN_PSRAM;
     cfg.grab_mode   = CAMERA_GRAB_LATEST;
   } else {
     cfg.frame_size  = FRAMESIZE_VGA;
-    cfg.jpeg_quality = 14;
+    cfg.jpeg_quality = 12;
     cfg.fb_count    = 1;
     cfg.fb_location = CAMERA_FB_IN_DRAM;
     cfg.grab_mode   = CAMERA_GRAB_WHEN_EMPTY;
@@ -66,12 +70,32 @@ esp_err_t camera_begin() {
     return err;
   }
 
-  // Sensor tweaks — flip image if mounted upside down etc.
+  // Sensor tuning — enable the OV2640's auto-everything machinery so the
+  // image copes with dusk, dawn, bright sun, and cloudy weather without
+  // intervention. Slight saturation + sharpness bumps make stored frames
+  // pop a bit more.
   sensor_t* s = esp_camera_sensor_get();
   if (s) {
-    s->set_brightness(s, 0);
-    s->set_saturation(s, 0);
+    s->set_whitebal(s, 1);                  // enable AWB
+    s->set_awb_gain(s, 1);
+    s->set_wb_mode(s, 0);                   // 0 = auto
+    s->set_exposure_ctrl(s, 1);             // enable AEC
+    s->set_aec2(s, 1);                      // enhanced AEC
+    s->set_ae_level(s, 0);                  // -2..2
+    s->set_gain_ctrl(s, 1);                 // enable AGC
+    s->set_gainceiling(s, GAINCEILING_4X);  // cap noise in low light
+    s->set_bpc(s, 1);                       // black-pixel correction
+    s->set_wpc(s, 1);                       // white-pixel correction
+    s->set_raw_gma(s, 1);                   // gamma correction
+    s->set_lenc(s, 1);                      // lens correction
+    s->set_dcw(s, 1);                       // downsize EN
+    s->set_brightness(s, 0);                // -2..2
+    s->set_contrast(s, 1);                  // a touch more contrast
+    s->set_saturation(s, 1);                // a touch more colour
+    s->set_sharpness(s, 1);                 // mild edge enhancement
+    s->set_colorbar(s, 0);                  // no test bar
+    s->set_special_effect(s, 0);            // 0 = none
   }
-  Serial.println("[cam] init ok (SVGA, JPEG)");
+  Serial.println("[cam] init ok (UXGA, JPEG q8)");
   return ESP_OK;
 }
